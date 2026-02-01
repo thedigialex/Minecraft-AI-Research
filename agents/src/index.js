@@ -93,6 +93,10 @@ async function main() {
             const observations = observer.getObservations();
             diaryEntry.observations = observations;
 
+            // Log inventory for debugging
+            const invStr = observations.inventory.slice(0, 10).map(i => `${i.name}x${i.count}`).join(', ') || 'Empty';
+            console.log(`[${AGENT_NAME}] Inventory: ${invStr}`);
+
             // Build prompt with current state
             const userPrompt = buildUserPrompt(observations, config.goal);
 
@@ -105,7 +109,7 @@ async function main() {
             diaryEntry.action = action;
 
             if (action) {
-                console.log(`[${AGENT_NAME}] Action: ${action.type}`, action.params || '');
+                console.log(`[${AGENT_NAME}] Action: ${action.type} ${action.raw || ''}`);
 
                 // Check rules before execution
                 const ruleCheck = ruleEngine.isAllowed(action);
@@ -167,19 +171,26 @@ YOUR GOAL: ${config.goal}
 RULES YOU MUST FOLLOW:
 ${rulesText}
 
-You can perform these actions:
-- move <direction> - Move north, south, east, or west
-- goto <x> <y> <z> - Navigate to specific coordinates
-- mine <block_type> - Mine a specific type of block nearby
-- collect <item> - Collect nearby items
-- attack <entity> - Attack a nearby entity
-- craft <item> - Craft an item if you have materials
-- place <block> - Place a block from inventory
-- eat - Eat food from inventory
-- sleep - Sleep in a nearby bed
-- chat <message> - Send a chat message
-- wait - Do nothing this turn
-- look <direction> - Look in a direction to observe
+AVAILABLE ACTIONS (use exactly ONE action per turn):
+- move north|south|east|west
+- goto <x> <y> <z>
+- mine <block_name>
+- collect <item_name>
+- attack <entity_type>
+- craft <item_name>
+- place <block_name>
+- eat
+- sleep
+- chat <message>
+- wait
+- look north|south|east|west|up|down
+
+ACTION FORMAT: Each action takes only ONE parameter (or none). Examples:
+- mine oak_log (correct - mines oak logs)
+- craft oak_planks (correct - crafts planks from logs)
+- craft wooden_pickaxe (correct - crafts pickaxe if you have planks+sticks)
+- place crafting_table (correct - places crafting table)
+- attack zombie (correct - attacks nearby zombie)
 
 IMPORTANT MINECRAFT KNOWLEDGE:
 - You start with NO tools. First gather wood (oak_log, birch_log, etc.) by hand
@@ -208,15 +219,41 @@ SMELTING (requires furnace + fuel like coal or planks):
 - gold_ore + fuel = gold_ingot
 - raw food + fuel = cooked food
 
+FARMING:
+- Seeds come from breaking TALL GRASS (short_grass/tall_grass), NOT grass_block!
+- Farming requires a HOE to till dirt/grass_block into farmland
+- Craft wooden_hoe: 2 planks + 2 sticks (needs crafting table)
+- Plant seeds on farmland near water for faster growth
+- Wheat seeds grow into wheat, which makes bread (3 wheat = 1 bread)
+
+FOOD SOURCES:
+- Kill animals (pig, cow, chicken, sheep) for raw meat
+- Cook raw meat in furnace for more hunger restoration
+- Apples drop rarely from oak leaves
+- Bread from wheat (no cooking needed)
+
 IMPORTANT: First explain your reasoning (2-3 sentences), then provide your action.
 
 Response format:
-THINKING: <your reasoning about the current situation and why you chose this action>
-ACTION: <action_name> <parameters>
+THINKING: <your reasoning about the current situation>
+ACTION: <action_name> <single_parameter>
 
-Example response:
+EXAMPLE RESPONSES:
+Example 1 - Need wood:
 THINKING: I have no tools yet. I need to gather wood first to craft a pickaxe before I can mine stone.
-ACTION: mine oak_log`;
+ACTION: mine oak_log
+
+Example 2 - Have logs, need planks:
+THINKING: I have oak_log in my inventory. I should craft it into planks for tools.
+ACTION: craft oak_planks
+
+Example 3 - Have planks, need sticks:
+THINKING: I have planks. Now I need sticks to combine with planks for tools.
+ACTION: craft stick
+
+Example 4 - Ready for crafting table:
+THINKING: I have 4 planks. I should craft a crafting table so I can make tools.
+ACTION: craft crafting_table`;
 }
 
 function buildUserPrompt(observations, goal) {

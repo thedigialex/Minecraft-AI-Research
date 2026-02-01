@@ -74,7 +74,8 @@ export class ActionExecutor {
             return false;
         }
 
-        const [x, y, z] = params.map(Number);
+        // Strip angle brackets and other non-numeric characters except minus and decimal
+        const [x, y, z] = params.map(p => Number(p.replace(/[<>]/g, '')));
 
         if (isNaN(x) || isNaN(y) || isNaN(z)) {
             console.log('[Action] Invalid coordinates');

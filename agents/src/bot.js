@@ -6,6 +6,7 @@ const collectBlock = collectBlockPkg.plugin || collectBlockPkg;
 import pvpPkg from 'mineflayer-pvp';
 const pvp = pvpPkg.plugin || pvpPkg;
 import minecraftData from 'minecraft-data';
+import Vec3 from 'vec3';
 
 export class Bot {
     constructor(options) {
@@ -127,7 +128,7 @@ export class Bot {
 
     async lookAt(x, y, z) {
         try {
-            await this.bot.lookAt({ x, y, z });
+            await this.bot.lookAt(new Vec3(x, y, z));
             return true;
         } catch (error) {
             console.log(`[Bot] Failed to look: ${error.message}`);
