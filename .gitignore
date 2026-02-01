@@ -1,0 +1,19 @@
+# Logs
+agents/logs/*.log
+
+# Minecraft server data
+minecraft-server/data/
+
+# Node modules
+node_modules/
+
+# Environment files with secrets
+.env.local
+.env.production
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+ollama-data/

@@ -1,0 +1,164 @@
+services:
+  # Minecraft Server - Paper 1.20.4
+  minecraft-server:
+    image: itzg/minecraft-server:latest
+    container_name: minecraft-server
+    environment:
+      EULA: "TRUE"
+      TYPE: "PAPER"
+      VERSION: "1.20.4"
+      ONLINE_MODE: "FALSE"
+      DIFFICULTY: "normal"
+      SPAWN_PROTECTION: "0"
+      MAX_PLAYERS: "10"
+      VIEW_DISTANCE: "10"
+      SIMULATION_DISTANCE: "10"
+      MEMORY: "2G"
+      ENABLE_COMMAND_BLOCK: "true"
+      ALLOW_FLIGHT: "true"
+      PVP: "true"
+      MOTD: "AI Research Minecraft Server"
+      FORCE_GAMEMODE: "false"
+      MODE: "survival"
+      # Note: In offline mode, add OP via console: docker exec minecraft-server rcon-cli op TheDigiAlex
+      # Cheats enabled - use /gamemode creative as OP
+    ports:
+      - "25565:25565"
+    volumes:
+      - ./minecraft-server/data:/data
+      - ./minecraft-server/config:/config
+    networks:
+      - minecraft-ai
+    restart: unless-stopped
+    healthcheck:
+      test: mc-health
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # Ollama - Local LLM Runtime
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - minecraft-ai
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # AI Agent 1 - Explorer/Gatherer
+  agent1:
+    build:
+      context: ./agents
+      dockerfile: Dockerfile
+    container_name: agent1
+    environment:
+      AGENT_NAME: "Explorer"
+      AGENT_CONFIG: "/app/configs/agent1.json"
+      MINECRAFT_HOST: "minecraft-server"
+      MINECRAFT_PORT: "25565"
+      OLLAMA_HOST: "http://ollama:11434"
+      LLM_MODEL: "${LLM_MODEL:-llama3.1:8b}"
+    volumes:
+      - ./agents/configs:/app/configs:ro
+      - ./agents/logs:/app/logs
+    networks:
+      - minecraft-ai
+    depends_on:
+      minecraft-server:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    restart: unless-stopped
+
+  # AI Agent 2 - Builder
+  agent2:
+    build:
+      context: ./agents
+      dockerfile: Dockerfile
+    container_name: agent2
+    environment:
+      AGENT_NAME: "Builder"
+      AGENT_CONFIG: "/app/configs/agent2.json"
+      MINECRAFT_HOST: "minecraft-server"
+      MINECRAFT_PORT: "25565"
+      OLLAMA_HOST: "http://ollama:11434"
+      LLM_MODEL: "${LLM_MODEL:-llama3.1:8b}"
+    volumes:
+      - ./agents/configs:/app/configs:ro
+      - ./agents/logs:/app/logs
+    networks:
+      - minecraft-ai
+    depends_on:
+      minecraft-server:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    restart: unless-stopped
+
+  # AI Agent 3 - Farmer/Survivor
+  agent3:
+    build:
+      context: ./agents
+      dockerfile: Dockerfile
+    container_name: agent3
+    environment:
+      AGENT_NAME: "Farmer"
+      AGENT_CONFIG: "/app/configs/agent3.json"
+      MINECRAFT_HOST: "minecraft-server"
+      MINECRAFT_PORT: "25565"
+      OLLAMA_HOST: "http://ollama:11434"
+      LLM_MODEL: "${LLM_MODEL:-llama3.1:8b}"
+    volumes:
+      - ./agents/configs:/app/configs:ro
+      - ./agents/logs:/app/logs
+    networks:
+      - minecraft-ai
+    depends_on:
+      minecraft-server:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    restart: unless-stopped
+
+  # AI Agent 4 - Hunter/Protector
+  agent4:
+    build:
+      context: ./agents
+      dockerfile: Dockerfile
+    container_name: agent4
+    environment:
+      AGENT_NAME: "Hunter"
+      AGENT_CONFIG: "/app/configs/agent4.json"
+      MINECRAFT_HOST: "minecraft-server"
+      MINECRAFT_PORT: "25565"
+      OLLAMA_HOST: "http://ollama:11434"
+      LLM_MODEL: "${LLM_MODEL:-llama3.1:8b}"
+    volumes:
+      - ./agents/configs:/app/configs:ro
+      - ./agents/logs:/app/logs
+    networks:
+      - minecraft-ai
+    depends_on:
+      minecraft-server:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    restart: unless-stopped
+
+networks:
+  minecraft-ai:
+    driver: bridge
+
+volumes:
+  ollama-data:
